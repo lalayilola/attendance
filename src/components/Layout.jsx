@@ -11,7 +11,8 @@ import {
   X,
   Clock,
   CheckCircle,
-  ChevronDown
+  ChevronDown,
+  Users
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
@@ -67,6 +68,10 @@ export function Layout({ children }) {
 
   if (profile?.role === 'scanner' || profile?.role === 'admin') {
     mainNavItems.push({ path: '/scanner', icon: Scan, label: 'QR Scanner' })
+  }
+
+  if (profile?.role === 'admin') {
+    mainNavItems.push({ path: '/admin', icon: Users, label: 'Admin' })
   }
 
   return (

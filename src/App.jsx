@@ -10,6 +10,7 @@ import { MyQR } from './pages/MyQR'
 import { History } from './pages/History'
 import { Profile } from './pages/Profile'
 import { Scanner } from './pages/Scanner'
+import { Admin } from './pages/Admin'
 
 function App() {
   return (
@@ -57,6 +58,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['scanner', 'admin']}>
                 <Layout><Scanner /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout><Admin /></Layout>
               </ProtectedRoute>
             }
           />
