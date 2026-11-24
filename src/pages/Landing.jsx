@@ -23,9 +23,9 @@ export function Landing() {
             </div>
             
             <img 
-              src="/logo final.png" 
+              src="/Municipality of Malimono Seal.png" 
               alt="Municipality of Malimono Logo" 
-              className="w-32 h-32 sm:w-40 sm:h-40 mx-auto mb-8 object-contain"
+              className="w-32 h-32 sm:w-40 sm:h-40 mx-auto mb-8 object-contain drop-shadow-lg"
             />
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">

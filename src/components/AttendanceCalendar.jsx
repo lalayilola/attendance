@@ -99,29 +99,29 @@ export function AttendanceCalendar({ attendanceRecords }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-gray-900">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <h3 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">
           {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={goToPreviousMonth}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 transition-colors border border-gray-200"
           >
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
           </button>
           <button
             onClick={goToToday}
-            className="px-3 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+            className="px-2.5 sm:px-3 py-1 text-xs sm:text-sm font-semibold text-primary-600 hover:bg-primary-50 rounded-md border border-primary-200 transition-colors"
           >
             Today
           </button>
           <button
             onClick={goToNextMonth}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 transition-colors border border-gray-200"
           >
-            <ChevronRight className="w-5 h-5 text-gray-600" />
+            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
           </button>
         </div>
       </div>
@@ -129,22 +129,22 @@ export function AttendanceCalendar({ attendanceRecords }) {
       {/* Day headers */}
       <div className="grid grid-cols-7 gap-1 mb-2">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="text-center text-sm font-semibold text-gray-600 py-2">
+          <div key={day} className="text-center text-xs sm:text-sm font-bold text-gray-500 py-1.5">
             {day}
           </div>
         ))}
       </div>
 
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
+      {/* Calendar grid with sharper cells */}
+      <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
         {calendarDays.map((day, index) => (
           <div
             key={index}
             className={`
-              aspect-square flex items-center justify-center rounded-lg text-sm font-medium
-              transition-all duration-200 cursor-pointer
+              aspect-square flex items-center justify-center rounded-sm sm:rounded-md text-xs sm:text-sm font-semibold
+              transition-all duration-150 cursor-pointer
               ${getDayColor(day.status)}
-              ${day.day ? 'hover:scale-105' : ''}
+              ${day.day ? 'hover:scale-[1.03]' : ''}
             `}
             title={getDayLabel(day.status)}
           >
@@ -153,23 +153,23 @@ export function AttendanceCalendar({ attendanceRecords }) {
         ))}
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-gray-200">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-green-500"></div>
-          <span className="text-sm text-gray-600">Present</span>
+      {/* Legend with crisp badges */}
+      <div className="flex flex-wrap gap-3 sm:gap-4 mt-5 pt-3 border-t border-gray-200 text-xs text-gray-600">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3.5 h-3.5 rounded-sm bg-green-500"></div>
+          <span className="font-medium">Present</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-yellow-500"></div>
-          <span className="text-sm text-gray-600">Late</span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3.5 h-3.5 rounded-sm bg-yellow-500"></div>
+          <span className="font-medium">Late</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-blue-500"></div>
-          <span className="text-sm text-gray-600">Incomplete</span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3.5 h-3.5 rounded-sm bg-blue-500"></div>
+          <span className="font-medium">Incomplete</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-gray-100"></div>
-          <span className="text-sm text-gray-600">Absent</span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3.5 h-3.5 rounded-sm bg-gray-200"></div>
+          <span className="font-medium">Absent</span>
         </div>
       </div>
     </div>

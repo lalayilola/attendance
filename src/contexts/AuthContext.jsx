@@ -57,7 +57,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const signUp = async (email, password, fullName) => {
+  const signUp = async (email, password, fullName, department = '', position = '') => {
     // First, sign up the user with email confirmation disabled
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -65,6 +65,8 @@ export function AuthProvider({ children }) {
       options: {
         data: {
           full_name: fullName,
+          department: department,
+          position: position,
         },
         emailRedirectTo: undefined,
       },
@@ -78,19 +80,35 @@ export function AuthProvider({ children }) {
         .map(b => b.toString(16).padStart(2, '0'))
         .join('')
 
-      const { error: profileError } = await supabase
+      const profilePayload = {
+        id: data.user.id,
+        full_name: fullName,
+        email: email,
+        role: 'user',
+        qr_token: qrToken,
+        department: department || '',
+        position: position || '',
+      }
+
+      let { error: profileError } = await supabase
         .from('profiles')
-        .insert({
+        .insert(profilePayload)
+
+      // Fallback in case department/position columns haven't been added to PostgreSQL yet
+      if (profileError && (profileError.message?.includes('department') || profileError.message?.includes('position') || profileError.code === 'PGRST204')) {
+        const fallbackPayload = {
           id: data.user.id,
           full_name: fullName,
           email: email,
           role: 'user',
           qr_token: qrToken,
-        })
+        }
+        const fallbackRes = await supabase.from('profiles').insert(fallbackPayload)
+        profileError = fallbackRes.error
+      }
 
       if (profileError) {
         console.error('Profile creation error:', profileError)
-        // Return the profile error but don't delete the user
         return { data, error: profileError }
       }
     }
@@ -113,10 +131,17 @@ export function AuthProvider({ children }) {
     setProfile(null)
   }
 
+  const refreshProfile = async () => {
+    if (user?.id) {
+      await fetchProfile(user.id)
+    }
+  }
+
   const value = {
     user,
     profile,
     loading,
+    refreshProfile,
     signUp,
     signIn,
     signOut,

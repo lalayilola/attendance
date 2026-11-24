@@ -35,19 +35,9 @@ A fully functional attendance monitoring system built with React, Vite, Tailwind
 
 Go to your Supabase project's SQL Editor and execute the following SQL files in order:
 
-#### File 1: `supabase/01_create_profiles_table.sql`
-Creates the profiles table and trigger for automatic profile creation on user signup.
+#### Database Setup
 
-#### File 2: `supabase/02_create_attendance_records_table.sql`
-Creates the attendance_records table for tracking TIME IN/TIME OUT.
-
-#### File 3: `supabase/03_rls_policies.sql`
-Implements Row Level Security policies to protect user data.
-
-#### File 4: `supabase/04_record_attendance_rpc.sql`
-Creates the PostgreSQL RPC function for secure attendance recording.
-
-**Important**: Execute these files in the exact order shown above.
+Go to your Supabase project's SQL Editor and run the file `supabase/setup.sql`. It creates everything needed: the `profiles` and `attendance_records` tables, indexes, Row Level Security policies, and the `record_attendance` RPC function. The script is idempotent and safe to re-run.
 
 ### 2. Environment Variables
 
@@ -79,25 +69,36 @@ npm run dev
 
 Open your browser to the URL shown in the terminal (usually `http://localhost:5173`).
 
-## User Roles
+## User Roles & Approval
 
-### User (Default)
-- Can view own profile
-- Can view own QR code
-- Can view own attendance history
-- Cannot access scanner
+Every registered account has a **role** (`user` or `admin`) and a **status** (`pending` or `approved`). New registrations default to `user` + `pending`.
 
-### Scanner
+### Pending accounts
+- Can log in and view their profile only
+- Cannot access the dashboard, QR code, history, or scanner
+- Attendance cannot be recorded for them
+
+### Approved users (role: `user`)
+- Can view own profile, QR code, and attendance history
+- Can access the QR scanner and record attendance
+
+### Admins (role: `admin`)
 - All user permissions
-- Can access QR scanner
-- Can record attendance for any user
+- Can view all profiles and attendance records
+- Can approve pending registrations
+- Can download DTR (daily time record) PDF reports
 
-### Admin
-- All scanner permissions
-- Can view all profiles
-- Can view all attendance records
+**Approving accounts**: Pending users can be approved from the Admin page, or via SQL:
 
-**Note**: New registrations default to the "user" role. To assign scanner or admin roles, manually update the `role` field in the Supabase `profiles` table.
+```sql
+UPDATE public.profiles SET status = 'approved' WHERE email = 'user@example.com';
+```
+
+**Making an admin**:
+
+```sql
+UPDATE public.profiles SET role = 'admin', status = 'approved' WHERE email = 'admin@example.com';
+```
 
 ## How It Works
 

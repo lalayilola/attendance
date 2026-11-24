@@ -4,15 +4,13 @@ import {
   LayoutDashboard, 
   QrCode, 
   History, 
-  Scan, 
   User, 
   LogOut, 
-  Menu,
-  X,
-  Clock,
-  CheckCircle,
-  ChevronDown,
-  Users
+  Clock, 
+  CheckCircle, 
+  Users, 
+  Hourglass,
+  Shield 
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
@@ -21,29 +19,52 @@ export function Layout({ children }) {
   const { profile, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [todayStatus, setTodayStatus] = useState({ hasTimeIn: false, hasTimeOut: false })
+  const [todayStatus, setTodayStatus] = useState({ 
+    morningIn: false, 
+    morningOut: false,
+    afternoonIn: false,
+    afternoonOut: false 
+  })
 
   useEffect(() => {
-    if (profile) {
+    if (profile && profile.role !== 'admin') {
       fetchTodayStatus()
     }
   }, [profile])
 
   const fetchTodayStatus = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
       const { data } = await supabase
         .from('attendance_records')
         .select('*')
         .eq('user_id', profile.id)
-        .gte('time_in', today)
-        .order('time_in', { ascending: false })
+        .gte('time_in', `${today}T00:00:00+08:00`)
+        .order('time_in', { ascending: true })
 
       if (data && data.length > 0) {
+        let mIn = false, mOut = false, aIn = false, aOut = false
+        data.forEach(r => {
+          const hour = parseInt(new Date(r.time_in).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            hour12: false,
+            timeZone: 'Asia/Manila'
+          }), 10)
+
+          if (hour < 12) {
+            mIn = true
+            if (r.time_out) mOut = true
+          } else {
+            aIn = true
+            if (r.time_out) aOut = true
+          }
+        })
+
         setTodayStatus({
-          hasTimeIn: true,
-          hasTimeOut: data.some(r => r.time_out)
+          morningIn: mIn,
+          morningOut: mOut,
+          afternoonIn: aIn,
+          afternoonOut: aOut
         })
       }
     } catch (error) {
@@ -56,184 +77,169 @@ export function Layout({ children }) {
     navigate('/login')
   }
 
-  const mainNavItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/my-qr', icon: QrCode, label: 'My QR Code' },
-    { path: '/history', icon: History, label: 'Attendance History' },
-  ]
-
-  const accountNavItems = [
-    { path: '/profile', icon: User, label: 'Profile' },
-  ]
-
-  if (profile?.role === 'scanner' || profile?.role === 'admin') {
-    mainNavItems.push({ path: '/scanner', icon: Scan, label: 'QR Scanner' })
-  }
-
-  if (profile?.role === 'admin') {
-    mainNavItems.push({ path: '/admin', icon: Users, label: 'Admin' })
-  }
+  const navItems = profile?.role === 'admin'
+    ? [
+        { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { path: '/history', icon: History, label: 'Staff Logs' },
+        { path: '/admin', icon: Users, label: 'Staff' },
+        { path: '/profile', icon: User, label: 'Profile' },
+      ]
+    : [
+        { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { path: '/my-qr', icon: QrCode, label: 'My QR' },
+        { path: '/history', icon: History, label: 'History' },
+        { path: '/profile', icon: User, label: 'Profile' },
+      ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile header */}
-      <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-primary-800">Attendance System</h1>
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 rounded-lg hover:bg-gray-100"
-        >
-          {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className={`
-          fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 transform transition-all duration-300 ease-in-out
-          lg:translate-x-0 lg:static lg:h-screen lg:sticky lg:top-0
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}>
-          <div className="flex flex-col h-full max-h-screen">
-            {/* User Profile Card */}
-            <div className="p-6 bg-gradient-to-br from-primary-600 to-primary-800">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
-                  {profile?.profile_picture ? (
-                    <img 
-                      src={profile.profile_picture} 
-                      alt="Profile" 
-                      className="w-14 h-14 rounded-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-8 h-8 text-primary-600" />
-                  )}
-                </div>
-                <div className="flex-1 text-white">
-                  <h2 className="font-bold text-lg truncate">{profile?.full_name}</h2>
-                  <p className="text-primary-100 text-sm truncate">{profile?.email}</p>
-                  <span className="inline-block mt-1 px-2 py-0.5 bg-white/20 rounded-full text-xs capitalize">
-                    {profile?.role}
-                  </span>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Top Header Bar across all devices */}
+      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          {/* Logo / Municipality Branding */}
+          <Link to="/dashboard" className="flex items-center gap-3 group">
+            <img
+              src="/Municipality of Malimono Seal.png"
+              alt="Municipality of Malimono Seal"
+              className="w-10 h-10 sm:w-11 sm:h-11 object-contain drop-shadow-sm transition-transform group-hover:scale-105"
+            />
+            <div>
+              <h1 className="text-base sm:text-lg font-black text-gray-900 leading-tight tracking-tight group-hover:text-primary-700 transition-colors">
+                Municipality of Malimono
+              </h1>
+              <p className="text-[11px] sm:text-xs font-semibold text-primary-700">
+                Attendance Monitoring System
+              </p>
             </div>
+          </Link>
 
-            {/* Today's Status Mini */}
-            <div className="p-4 border-b border-gray-200 bg-gray-50">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Today's Status</p>
-              <div className="flex gap-2">
-                <div className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg ${
-                  todayStatus.hasTimeIn ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+          {/* User Quick Info & Sign Out */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Today's status mini chips / Admin Badge */}
+            {profile?.role === 'admin' ? (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold shadow-sm">
+                <Shield size={13} className="text-purple-600" /> Administrator
+              </span>
+            ) : (
+              <div className="hidden sm:flex items-center gap-1.5 text-xs">
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border font-semibold ${
+                  todayStatus.morningIn && todayStatus.morningOut
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : todayStatus.morningIn
+                      ? 'bg-amber-50 border-amber-200 text-amber-800'
+                      : 'bg-gray-100 border-gray-200 text-gray-500'
                 }`}>
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-xs font-medium">Time In</span>
-                </div>
-                <div className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg ${
-                  todayStatus.hasTimeOut ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  AM: {todayStatus.morningIn ? (todayStatus.morningOut ? 'Done' : 'Timed In') : 'Pending'}
+                </span>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border font-semibold ${
+                  todayStatus.afternoonIn && todayStatus.afternoonOut
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : todayStatus.afternoonIn
+                      ? 'bg-amber-50 border-amber-200 text-amber-800'
+                      : 'bg-gray-100 border-gray-200 text-gray-500'
                 }`}>
-                  <Clock className="w-4 h-4" />
-                  <span className="text-xs font-medium">Time Out</span>
-                </div>
+                  PM: {todayStatus.afternoonIn ? (todayStatus.afternoonOut ? 'Done' : 'Timed In') : 'Pending'}
+                </span>
               </div>
-            </div>
+            )}
 
-            {/* Main Navigation */}
-            <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-4">Main Menu</p>
-                <div className="space-y-1">
-                  {mainNavItems.map((item) => {
-                    const Icon = item.icon
-                    const isActive = location.pathname === item.path
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setSidebarOpen(false)}
-                        className={`
-                          flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
-                          ${isActive 
-                            ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg' 
-                            : 'text-gray-700 hover:bg-gray-100'
-                          }
-                        `}
-                      >
-                        <Icon 
-                          size={20} 
-                          className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} 
-                        />
-                        <span className="font-medium">{item.label}</span>
-                        {isActive && <ChevronDown className="ml-auto w-4 h-4" />}
-                      </Link>
-                    )
-                  })}
-                </div>
+            {/* Profile Avatar & Name */}
+            <Link 
+              to="/profile" 
+              className="flex items-center gap-2.5 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+              title="View Profile"
+            >
+              <div className="w-8 h-8 rounded-md bg-primary-100 flex items-center justify-center text-primary-700 font-bold overflow-hidden border border-primary-200">
+                {profile?.profile_picture ? (
+                  <img src={profile.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  profile?.full_name ? profile.full_name[0].toUpperCase() : 'U'
+                )}
               </div>
-
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-4">Account</p>
-                <div className="space-y-1">
-                  {accountNavItems.map((item) => {
-                    const Icon = item.icon
-                    const isActive = location.pathname === item.path
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setSidebarOpen(false)}
-                        className={`
-                          flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
-                          ${isActive 
-                            ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg' 
-                            : 'text-gray-700 hover:bg-gray-100'
-                          }
-                        `}
-                      >
-                        <Icon 
-                          size={20} 
-                          className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} 
-                        />
-                        <span className="font-medium">{item.label}</span>
-                        {isActive && <ChevronDown className="ml-auto w-4 h-4" />}
-                      </Link>
-                    )
-                  })}
-                </div>
+              <div className="hidden md:block text-left">
+                <p className="text-xs font-bold text-gray-900 leading-tight truncate max-w-[120px]">
+                  {profile?.full_name?.split(' ')[0]}
+                </p>
+                <span className="text-[10px] font-semibold text-gray-500 uppercase">
+                  {profile?.role}
+                </span>
               </div>
-            </nav>
+            </Link>
 
-            {/* Sign Out */}
-            <div className="p-4 border-t border-gray-200">
-              <button
-                onClick={handleSignOut}
-                className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 group"
-              >
-                <LogOut size={20} className="group-hover:scale-110 transition-transform duration-200" />
-                <span className="font-medium">Sign Out</span>
-              </button>
-            </div>
+            {/* Sign Out Button */}
+            <button
+              onClick={handleSignOut}
+              className="p-2 sm:px-3 sm:py-1.5 text-rose-600 hover:bg-rose-50 rounded-md border border-rose-200 hover:border-rose-300 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+              title="Sign Out"
+            >
+              <LogOut size={15} />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
           </div>
-        </aside>
+        </div>
+      </header>
 
-        {/* Overlay for mobile */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
-            onClick={() => setSidebarOpen(false)}
-          />
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-6xl w-full mx-auto p-3.5 sm:p-6 lg:p-8 pb-28 sm:pb-28">
+        {profile?.status === 'pending' && location.pathname !== '/profile' ? (
+          <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="w-16 h-16 bg-amber-100 rounded-lg flex items-center justify-center mb-5">
+              <Hourglass className="w-8 h-8 text-amber-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Account Pending Approval</h2>
+            <p className="text-gray-600 text-sm max-w-md">
+              Your account has been registered and is awaiting approval from an administrator.
+              You'll be able to access attendance features once approved.
+            </p>
+            <p className="text-xs text-gray-500 mt-4">
+              You can still view and update your <Link to="/profile" className="text-primary-600 font-bold hover:underline">profile</Link>.
+            </p>
+          </div>
+        ) : (
+          children
         )}
+      </main>
 
-        {/* Main content */}
-        <main className="flex-1 p-4 lg:p-8 overflow-auto">
-          {/* Municipality Header */}
-          <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-2xl p-6 text-white shadow-lg mb-6">
-            <h1 className="text-2xl font-bold">Municipality of Malimono</h1>
-            <p className="text-primary-100 mt-1">Attendance Monitoring System</p>
+      {/* Persistent Bottom Navigation Bar (Across all devices) */}
+      <nav 
+        aria-label="Bottom Navigation" 
+        className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
+      >
+        <div className="max-w-2xl mx-auto px-2 sm:px-6">
+          <div className="flex items-center justify-around py-1.5 sm:py-2">
+            {navItems.map((item) => {
+              const Icon = item.icon
+              const isActive = location.pathname === item.path
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`
+                    flex-1 flex flex-col items-center justify-center py-1 sm:py-1.5 px-2 rounded-md transition-all duration-150 relative group
+                    ${isActive 
+                      ? 'text-primary-600 font-bold bg-primary-50/70' 
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/70 font-medium'
+                    }
+                  `}
+                >
+                  {/* Active Indicator Top Line */}
+                  {isActive && (
+                    <span className="absolute -top-1.5 sm:-top-2 w-8 h-1 bg-primary-600 rounded-sm"></span>
+                  )}
+
+                  <Icon 
+                    size={20} 
+                    className={`transition-transform duration-150 ${isActive ? 'scale-110 text-primary-600' : 'group-hover:scale-105'}`} 
+                  />
+                  <span className="text-[11px] sm:text-xs tracking-tight mt-0.5">
+                    {item.label}
+                  </span>
+                </Link>
+              )
+            })}
           </div>
-          {children}
-        </main>
-      </div>
+        </div>
+      </nav>
     </div>
   )
 }
